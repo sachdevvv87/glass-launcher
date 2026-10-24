@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One app icon. All sizes are set in code from Metrics. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:defaultFocusHighlightEnabled="false"
+    android:focusable="true"
+    android:orientation="vertical"
+    tools:targetApi="o">
+
+    <FrameLayout
+        android:id="@+id/tile"
+        android:layout_width="match_parent"
+        android:layout_height="100dp">
+
+        <!-- Artwork layer: drifts against the tile for the parallax effect. -->
+        <FrameLayout
+            android:id="@+id/layer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:id="@+id/banner"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop" />
+
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter" />
+        </FrameLayout>
+
+        <!-- Glass sheen: light at the top, slightly darker at the bottom. -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/tile_sheen" />
+
+        <!-- Specular highlight that glides across when the icon tilts. -->
+        <View
+            android:id="@+id/specular"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:alpha="0" />
+
+        <View
+            android:id="@+id/rim"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.6" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:maxLines="1"
+        android:shadowColor="#99000000"
+        android:shadowDy="1"
+        android:shadowRadius="6"
+        android:textColor="#F2FFFFFF" />
+</LinearLayout>

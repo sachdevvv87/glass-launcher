@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_wallpaper"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="96dp"
+        android:paddingTop="48dp"
+        android:paddingEnd="96dp"
+        android:paddingBottom="64dp">
+
+        <TextView
+            style="@style/Glass.Title"
+            android:text="@string/setup_title" />
+
+        <TextView
+            style="@style/Glass.Body"
+            android:layout_marginTop="6dp"
+            android:text="@string/setup_subtitle" />
+
+        <!-- Main launcher -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_launcher" />
+
+            <TextView
+                android:id="@+id/status_text"
+                style="@style/Glass.Body"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp" />
+
+            <TextView
+                android:id="@+id/btn_lock"
+                style="@style/Glass.Button"
+                android:text="@string/btn_lock" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/btn_lock_caption" />
+
+            <TextView
+                android:id="@+id/btn_guard"
+                style="@style/Glass.Button"
+                android:text="@string/btn_guard" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/btn_guard_caption" />
+
+            <TextView
+                android:id="@+id/btn_restore"
+                style="@style/Glass.Button"
+                android:text="@string/btn_restore_launcher" />
+        </LinearLayout>
+
+        <!-- Bloatware -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_bloat" />
+
+            <TextView
+                style="@style/Glass.Body"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="10dp"
+                android:text="@string/section_bloat_body" />
+
+            <LinearLayout
+                android:id="@+id/bloat_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <TextView
+                android:id="@+id/btn_disable"
+                style="@style/Glass.Button"
+                android:text="@string/btn_disable" />
+
+            <TextView
+                android:id="@+id/btn_enable_all"
+                style="@style/Glass.Button" />
+        </LinearLayout>
+
+        <!-- Home screen -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_home" />
+
+            <TextView
+                android:id="@+id/btn_artwork"
+                style="@style/Glass.Button" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/btn_artwork_caption" />
+        </LinearLayout>
+
+        <!-- Help -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_help" />
+
+            <TextView
+                style="@style/Glass.Body"
+                android:layout_marginTop="8dp"
+                android:lineSpacingExtra="4dp"
+                android:text="@string/help_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:background="@drawable/glass_panel"
+            android:fontFamily="monospace"
+            android:padding="20dp"
+            android:textColor="#B3FFFFFF"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

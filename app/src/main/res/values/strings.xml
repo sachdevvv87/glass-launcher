@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Glass Launcher</string>
+    <string name="settings">Settings</string>
+    <string name="move_hint">Move the app with the arrow buttons  ·  Press OK when done</string>
+    <string name="cannot_open">That can\'t be opened on this TV</string>
+    <string name="shelf_credit">Artwork: TVmaze</string>
+
+    <!-- Setup: home screen -->
+    <string name="section_home">Home screen</string>
+    <string name="btn_artwork">Show artwork in the Top Shelf: %1$s</string>
+    <string name="btn_artwork_caption">For Netflix, Prime Video, YouTube, Apple TV, JioHotstar and other streaming apps, the Top Shelf shows backdrops of shows currently on that service, from tvmaze.com (refreshed twice a day). Android only lets its built-in launcher read the apps\' own posters.</string>
+
+    <!-- Context menu -->
+    <string name="action_edit">Edit Home Screen</string>
+    <string name="action_info">App Info</string>
+    <string name="action_hide">Hide from Home Screen</string>
+    <string name="action_uninstall">Delete App</string>
+    <string name="action_glass_settings">Glass Launcher Settings</string>
+    <string name="action_show_hidden">Show Hidden Apps (%1$d)</string>
+    <string name="action_reset">Reset Home Screen Layout</string>
+
+    <!-- Setup screen -->
+    <string name="setup_title">Glass Launcher Settings</string>
+    <string name="setup_subtitle">Make Glass your permanent Home screen and clean up preinstalled apps.</string>
+    <string name="section_launcher">Main launcher</string>
+    <string name="setup_status">Home Guard: %1$s\nDefault Home app: %2$s\nOriginal launcher: %3$s</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="state_active">Still active</string>
+    <string name="state_disabled">Disabled</string>
+    <string name="home_not_set">Not set (the TV asks)</string>
+    <string name="btn_lock">Lock Glass as the main launcher</string>
+    <string name="btn_lock_caption">Sets Glass as the default Home app, turns off the original launcher and switches on Home Guard. Needs USB debugging on (see How this works). Accept the \"Allow debugging?\" prompt and tick Always allow.</string>
+    <string name="btn_guard">Turn on Home Guard manually</string>
+    <string name="btn_guard_caption">Opens Accessibility settings. Choose Glass Launcher Home Guard and turn it on. Home Guard sends the Home button back to Glass and closes the original launcher whenever it appears.</string>
+    <string name="btn_restore_launcher">Restore the original launcher</string>
+    <string name="section_bloat">Remove bloatware</string>
+    <string name="section_bloat_body">Select apps, then press Disable. Disabled apps disappear completely but are not deleted, so you can bring them back here at any time.</string>
+    <string name="btn_disable">Disable selected apps</string>
+    <string name="btn_restore_apps">Restore apps disabled by Glass (%1$d)</string>
+    <string name="no_bloat">No preinstalled extras were found on this TV.</string>
+    <string name="note_preinstalled">Preinstalled app</string>
+    <string name="section_help">How this works</string>
+    <string name="help_text">Locking Glass and removing bloatware use the TV\'s own debugging connection, the same access a PC gets with adb.\n\n1. Settings → Device Preferences (or System) → About: press OK on Build 7 times.\n2. Settings → Developer options: turn on USB debugging, and Network debugging if your TV lists it.\n3. Come back here, press a button, and accept the \"Allow debugging?\" prompt (tick Always allow).\n\nIf it says it can\'t connect, your TV only offers Wireless debugging. From a PC, run \"adb connect TV-IP\" once, then \"adb tcpip 5555\", and try again. Needs Android 8 or newer.</string>
+    <string name="log_connecting">Connecting to this TV… If an \"Allow debugging?\" prompt appears, choose Always allow and OK.</string>
+    <string name="log_done">Done.</string>
+    <string name="log_failed">Couldn\'t connect to this TV\'s debugging service (%1$s). Check \"How this works\" below.</string>
+    <string name="log_nothing_selected">Select at least one app first.</string>
+    <string name="log_nothing_to_restore">No apps have been disabled by Glass.</string>
+
+    <!-- Home Guard accessibility service -->
+    <string name="guard_label">Glass Launcher Home Guard</string>
+    <string name="guard_description">Keeps Glass Launcher as your Home screen. When you press Home, or the original launcher opens, it switches back to Glass Launcher. It doesn\'t read or collect anything on screen.</string>
+</resources>

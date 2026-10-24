@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_wallpaper">
+
+    <!-- Everything that gets blurred behind the glass context menu. -->
+    <FrameLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Full-screen Top Shelf artwork; two layers to cross-fade between apps. -->
+        <ImageView
+            android:id="@+id/art_a"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:id="@+id/art_b"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/shelf_scrim" />
+
+        <!-- Keeps the title readable over bright show artwork. -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/shelf_corner" />
+
+        <!-- Darkens the artwork once the Top Shelf has scrolled away. -->
+        <View
+            android:id="@+id/grid_shade"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:background="#B3000000" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/grid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:overScrollMode="never"
+            android:scrollbars="none" />
+
+        <!-- Big title, top left (the app's name stands in for a show's title art). -->
+        <TextView
+            android:id="@+id/shelf_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif"
+            android:maxLines="2"
+            android:shadowColor="#B3000000"
+            android:shadowDy="3"
+            android:shadowRadius="16"
+            android:textColor="#FFFFFFFF"
+            android:textStyle="bold" />
+
+        <!-- Invisible target above the dock: pressing Up "enters" the Top Shelf. -->
+        <View
+            android:id="@+id/shelf_focus"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_gravity="top"
+            android:defaultFocusHighlightEnabled="false"
+            android:focusable="true"
+            tools:targetApi="o" />
+
+        <LinearLayout
+            android:id="@+id/shelf_dots"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="40dp"
+            android:alpha="0"
+            android:orientation="horizontal" />
+
+        <!-- TVmaze's licence asks for a credit wherever its data is shown. -->
+        <TextView
+            android:id="@+id/shelf_credit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="76dp"
+            android:layout_marginEnd="36dp"
+            android:text="@string/shelf_credit"
+            android:textColor="#80FFFFFF"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
+        <!-- Clock + profile, top right. -->
+        <LinearLayout
+            android:id="@+id/time_pill"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/time_pill"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextClock
+                android:id="@+id/clock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:format12Hour="h:mm a"
+                android:format24Hour="H:mm"
+                android:textColor="#F2FFFFFF" />
+
+            <View
+                android:id="@+id/avatar"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/avatar" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/move_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="28dp"
+        android:background="@drawable/pill"
+        android:elevation="8dp"
+        android:fontFamily="sans-serif-medium"
+        android:paddingStart="26dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="26dp"
+        android:paddingBottom="12dp"
+        android:text="@string/move_hint"
+        android:textColor="#FFFFFFFF"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+    <!-- Glass context menu (hold OK on an app). -->
+    <FrameLayout
+        android:id="@+id/menu_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#40000000"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/menu_panel"
+            android:layout_width="300dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:background="@drawable/glass_panel"
+            android:elevation="30dp"
+            android:orientation="vertical"
+            android:padding="10dp" />
+    </FrameLayout>
+</FrameLayout>

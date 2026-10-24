@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Soft darkening from the top-left corner, behind the Top Shelf title. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:centerColor="#00000000"
+        android:centerX="0.35"
+        android:centerY="0.35"
+        android:endColor="#00000000"
+        android:startColor="#80000000" />
+</shape>

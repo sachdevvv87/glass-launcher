@@ -1,0 +1,25 @@
+# Gradle / Android build output
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine config (SDK path, signing)
+local.properties
+*.keystore
+*.jks
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Built APKs belong in GitHub Releases, not the repo
+*.apk
+*.aab
