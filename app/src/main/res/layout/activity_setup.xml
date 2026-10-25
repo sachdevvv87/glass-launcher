@@ -89,12 +89,53 @@
                 style="@style/Glass.Button" />
         </LinearLayout>
 
+        <!-- Ad blocking -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_adblock" />
+
+            <TextView
+                android:id="@+id/adblock_status"
+                style="@style/Glass.Body"
+                android:layout_marginTop="8dp" />
+
+            <TextView
+                android:id="@+id/btn_adblock"
+                style="@style/Glass.Button"
+                android:text="@string/btn_adblock" />
+
+            <TextView
+                android:id="@+id/btn_adblock_family"
+                style="@style/Glass.Button"
+                android:text="@string/btn_adblock_family" />
+
+            <TextView
+                android:id="@+id/btn_adblock_off"
+                style="@style/Glass.Button"
+                android:text="@string/btn_adblock_off" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/adblock_caption" />
+        </LinearLayout>
+
         <!-- Home screen -->
         <LinearLayout style="@style/Glass.Card">
 
             <TextView
                 style="@style/Glass.Heading"
                 android:text="@string/section_home" />
+
+            <TextView
+                android:id="@+id/btn_rearrange"
+                style="@style/Glass.Button"
+                android:text="@string/btn_rearrange" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/btn_rearrange_caption" />
 
             <TextView
                 android:id="@+id/btn_artwork"

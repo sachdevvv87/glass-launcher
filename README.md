@@ -23,16 +23,34 @@ Not affiliated with Apple; no Apple code, assets or branding are used.
 - **Press Up from the dock** to enter the Top Shelf: the apps slide away, left/right pages
   through the dock apps (page dots at the bottom), OK opens one, Down/Back returns.
 - Going down into the grid slides the Top Shelf away; app names appear under the focused icon.
-- **Hold OK** (or press Menu) on an app for a glass context menu: Edit Home Screen (wiggle and
-  move with the arrows), App Info, Hide from Home Screen, Delete App.
-- **Hold OK on Settings** for: Glass Launcher Settings, Show Hidden Apps, Reset Layout.
+- **Hold OK** (or press Menu) on an app for a glass context menu: Edit Home Screen, Move to Top
+  Row, App Info, Hide from Home Screen, Delete App.
+- **Hold OK on Settings** for: Rearrange Apps, Glass Launcher Settings, Show Hidden Apps, Reset Layout.
+
+### Rearranging apps (Edit Home Screen)
+Every icon wiggles, like tvOS. Browse with the arrows, **OK picks an app up**, the arrows carry it
+(up/down jump a whole row, so any app can go straight into the top dock), **OK drops it**, then pick
+up the next one. **Back** finishes and saves. Open it from any of:
+- hold OK on an app → **Edit Home Screen** (starts with that app picked up), or **Move to Top Row**;
+- hold OK on the **Settings** icon → **Rearrange Apps**;
+- **Glass Launcher Settings → Home screen → Rearrange apps**.
+
+### Ad blocking
+**Glass Launcher Settings → Ad blocking.** Switches Android's built-in Private DNS (DNS-over-TLS) to
+AdGuard's free DNS, so ad and tracker servers are blocked for every app on the TV, with no VPN or extra
+app. Options: ads + trackers, ads + trackers + adult sites (AdGuard Family), or off. Glass checks
+that a test ad server is blocked and that the internet still works. If your network blocks
+secure DNS, it switches itself back off. DNS blocking can't remove YouTube/Netflix in-video ads,
+which are served from the same servers as the videos.
 
 ### Top Shelf artwork
 - **Streaming apps** (Netflix, Prime Video, YouTube, Apple TV, JioHotstar, Disney+, Hulu, Max,
-  Paramount+, Peacock) show full-screen backdrops of shows currently on that service, with the
-  show's title, rotating every 9 seconds. In the Top Shelf, left/right moves between shows.
-  Data and images come from [TVmaze](https://www.tvmaze.com) (free API, CC BY-SA), refreshed every
-  12 hours and cached on the TV. It can be switched off in Glass Launcher Settings → Home screen.
+  Paramount+, Peacock) show the **newest releases** on that service: brand-new series first, then
+  new seasons, then new episodes, from the last 10 days. Each comes with a full-screen backdrop,
+  the show's title, and a line like *"New season · Season 4 · Yesterday"*, rotating every 9 seconds.
+  In the Top Shelf, left/right moves between shows.
+  Data and images come from [TVmaze](https://www.tvmaze.com) (free API, CC BY-SA), checked every
+  3 hours and cached on the TV. It can be switched off in Glass Launcher Settings → Home screen.
 - **Other apps** show their own TV banner (or icon), heavily blurred, with the app's name.
 
 Android only lets its built-in launcher read the poster "channels" apps publish (the permission
@@ -106,6 +124,7 @@ app/src/main/java/com/glass/launcher/
   SetupActivity.kt     Glass Launcher Settings (lock, debloat, restore)
   HomeGuardService.kt  keeps Glass as Home (accessibility service)
   TvShell.kt           runs shell commands through the TV's own ADB
-  ShelfContent.kt      streaming show artwork for the Top Shelf (TVmaze)
+  ShelfContent.kt      newest-release show artwork for the Top Shelf (TVmaze)
+  AdBlock.kt           system-wide ad blocking via Private DNS (AdGuard)
   Debloat.kt           which preinstalled apps are offered / protected
 ```

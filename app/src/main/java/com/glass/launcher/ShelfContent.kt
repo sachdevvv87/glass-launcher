@@ -18,13 +18,35 @@ import java.util.Locale
  *
  * Android only lets the built-in launcher read the poster "channels" apps publish, so instead this
  * asks TVmaze (tvmaze.com, free API, CC BY-SA) which shows each streaming service released in the
- * last two weeks, and uses the most popular ones' full-screen backgrounds.
+ * last 10 days, ranks them newest-first (new series, new seasons, new episodes), and uses their
+ * full-screen backgrounds.
  *
  * Everything here blocks on the network or disk: call it from a background thread.
  */
 class ShelfContent(private val context: Context) {
 
-    class Item(val title: String, val imageUrl: String, val showId: Int)
+    enum class Kind { SERIES, SEASON, EPISODE }
+
+    class Item(
+        val title: String,
+        val imageUrl: String,
+        val showId: Int,
+        /** What makes it new: a brand-new series, a new season, or a new episode. */
+        val kind: Kind,
+        val season: Int,
+        /** yyyy-MM-dd of the newest episode. */
+        val airdate: String,
+    ) {
+        /** e.g. "New season · Season 4 · Yesterday". Built on demand so "Today" never goes stale. */
+        fun subtitle(): String {
+            val what = when (kind) {
+                Kind.SERIES -> "New series"
+                Kind.SEASON -> "New season · Season $season"
+                Kind.EPISODE -> "New episode · Season $season"
+            }
+            return "$what · ${relativeDay(airdate)}"
+        }
+    }
 
     private val dir = File(context.cacheDir, "shelf").apply { mkdirs() }
     private val indexFile = File(dir, "index.json")
@@ -35,26 +57,32 @@ class ShelfContent(private val context: Context) {
 
     fun itemsFor(pkg: String): List<Item> = index[pkg].orEmpty()
 
-    /** Loads the cached list, re-downloading it when older than 12 hours. */
-    fun refresh() {
+    /**
+     * Loads the cached list, re-downloading it when older than [MAX_AGE_MS] (3 hours).
+     * Returns true when the shows on offer changed (so the screen should redraw).
+     */
+    fun refresh(): Boolean {
+        val before = index
         if (!isEnabled(context)) {
             index = emptyMap()
-            return
+            return before.isNotEmpty()
         }
-        val cached = readIndex()
-        if (cached != null) index = cached
+        val cached = if (indexFile.exists()) readIndex() else null
+        if (index.isEmpty() && cached != null) index = cached
         val fresh = cached != null && System.currentTimeMillis() - indexFile.lastModified() < MAX_AGE_MS
-        if (fresh) return
-        val downloaded = try {
-            download()
-        } catch (e: Exception) {
-            null
+        if (!fresh) {
+            val downloaded = try {
+                download()
+            } catch (e: Exception) {
+                null
+            }
+            if (downloaded != null && downloaded.isNotEmpty()) {
+                index = downloaded
+                writeIndex(downloaded)
+                pruneImages()
+            }
         }
-        if (downloaded != null && downloaded.isNotEmpty()) {
-            index = downloaded
-            writeIndex(downloaded)
-            pruneImages()
-        }
+        return index !== before
     }
 
     /** The backdrop for [item], downloaded once and then served from disk, scaled to [maxWidth]. */
@@ -89,32 +117,61 @@ class ShelfContent(private val context: Context) {
 
     // ---- TVmaze --------------------------------------------------------------------------
 
+    /** One show's newest release in the window, scored for "how new and how big". */
+    private class Candidate(
+        val showId: Int, val name: String, val weight: Int,
+        val kind: Kind, val season: Int, val airdate: String, val score: Double,
+    )
+
     private fun download(): Map<String, List<Item>> {
-        // 1. Shows each service streamed new episodes of in the last two weeks.
-        val shows = HashMap<Int, MutableMap<Int, Pair<String, Int>>>() // channel -> show id -> (name, weight)
+        // 1. Every episode each service released in the last DAYS days.
+        val shows = HashMap<Int, MutableMap<Int, Candidate>>() // channel -> show id -> best candidate
         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val today = fmt.parse(fmt.format(Calendar.getInstance().time))!!.time
         val day = Calendar.getInstance()
         repeat(DAYS) {
             val date = fmt.format(day.time)
             day.add(Calendar.DAY_OF_MONTH, -1)
             val episodes = JSONArray(get("$API/schedule/web?date=$date"))
             for (i in 0 until episodes.length()) {
-                val show = episodes.getJSONObject(i).optJSONObject("_embedded")?.optJSONObject("show") ?: continue
+                val ep = episodes.getJSONObject(i)
+                val show = ep.optJSONObject("_embedded")?.optJSONObject("show") ?: continue
                 val channel = show.optJSONObject("webChannel")?.optInt("id") ?: continue
                 if (channel !in CHANNELS.values) continue
-                shows.getOrPut(channel) { HashMap() }[show.getInt("id")] =
-                    show.getString("name") to show.optInt("weight")
+                val airdate = ep.optString("airdate").ifEmpty { date }
+                val premiered = show.optString("premiered")
+                val daysOld = daysBetween(fmt, airdate, today)
+                val kind = when {
+                    premiered.isNotEmpty() && daysBetween(fmt, premiered, today) <= NEW_SERIES_DAYS -> Kind.SERIES
+                    ep.optInt("number", 99) == 1 -> Kind.SEASON
+                    else -> Kind.EPISODE
+                }
+                val weight = show.optInt("weight")
+                // Newness first (new series > new season > new episode, and the more recent the
+                // better), popularity second, so last week's premiere beats a long-running hit.
+                val score = weight * 0.6 +
+                    (when (kind) { Kind.SERIES -> 40; Kind.SEASON -> 25; Kind.EPISODE -> 0 }) +
+                    (DAYS - daysOld).coerceAtLeast(0) * 3.0
+                val id = show.getInt("id")
+                val byShow = shows.getOrPut(channel) { HashMap() }
+                val previous = byShow[id]
+                if (previous == null || score > previous.score) {
+                    byShow[id] = Candidate(
+                        id, show.getString("name"), weight, kind, ep.optInt("season", 1), airdate, score,
+                    )
+                }
             }
         }
 
-        // 2. The most popular ones that have a wide background image.
+        // 2. Best-scoring shows that have a wide background image. Obscure shows only fill gaps.
         val perChannel = HashMap<Int, List<Item>>()
         for ((channel, found) in shows) {
+            val (popular, rest) = found.values.sortedByDescending { it.score }.partition { it.weight >= MIN_WEIGHT }
             val items = ArrayList<Item>()
-            for ((id, info) in found.entries.sortedByDescending { it.value.second }.take(CANDIDATES)) {
+            for (c in (popular + rest).take(CANDIDATES)) {
                 if (items.size >= PER_APP) break
-                val url = background(id) ?: continue
-                items += Item(info.first, url, id)
+                val url = background(c.showId) ?: continue
+                items += Item(c.name, url, c.showId, c.kind, c.season, c.airdate)
             }
             if (items.isNotEmpty()) perChannel[channel] = items
         }
@@ -177,7 +234,11 @@ class ShelfContent(private val context: Context) {
             val arr = root.getJSONArray(pkg)
             (0 until arr.length()).map {
                 val o = arr.getJSONObject(it)
-                Item(o.getString("t"), o.getString("u"), o.getInt("i"))
+                // An older cache without these fields fails here, which forces a fresh download.
+                Item(
+                    o.getString("t"), o.getString("u"), o.getInt("i"),
+                    Kind.valueOf(o.getString("k")), o.getInt("s"), o.getString("d"),
+                )
             }
         }
     } catch (e: Exception) {
@@ -188,7 +249,12 @@ class ShelfContent(private val context: Context) {
         val root = JSONObject()
         data.forEach { (pkg, items) ->
             root.put(pkg, JSONArray().apply {
-                items.forEach { put(JSONObject().put("t", it.title).put("u", it.imageUrl).put("i", it.showId)) }
+                items.forEach {
+                    put(
+                        JSONObject().put("t", it.title).put("u", it.imageUrl).put("i", it.showId)
+                            .put("k", it.kind.name).put("s", it.season).put("d", it.airdate)
+                    )
+                }
             })
         }
         indexFile.writeText(root.toString())
@@ -202,11 +268,40 @@ class ShelfContent(private val context: Context) {
 
     companion object {
         private const val API = "https://api.tvmaze.com"
-        private const val DAYS = 14
+        /** How far back to look for new releases. */
+        private const val DAYS = 10
         private const val PER_APP = 5
-        private const val CANDIDATES = 10
+        private const val CANDIDATES = 12
         private const val MIN_WIDTH = 1000
-        private const val MAX_AGE_MS = 12 * 60 * 60 * 1000L
+        /** Shows below this TVmaze popularity (0-100) are only used when nothing better exists. */
+        private const val MIN_WEIGHT = 70
+        /** A show that premiered this recently counts as a brand-new series. */
+        private const val NEW_SERIES_DAYS = 30
+        /** Re-download every 3 hours so the Top Shelf keeps up with new releases. */
+        const val MAX_AGE_MS = 3 * 60 * 60 * 1000L
+
+        private fun daysBetween(fmt: SimpleDateFormat, date: String, todayMs: Long): Int = try {
+            ((todayMs - fmt.parse(date)!!.time) / 86_400_000L).toInt()
+        } catch (e: Exception) {
+            Int.MAX_VALUE
+        }
+
+        /** "Today", "Yesterday", "3 days ago", or "21 Oct". */
+        fun relativeDay(date: String): String {
+            val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val today = fmt.parse(fmt.format(Calendar.getInstance().time))!!.time
+            return when (val d = daysBetween(fmt, date, today)) {
+                Int.MAX_VALUE -> "Now streaming"
+                in Int.MIN_VALUE..0 -> "Today"
+                1 -> "Yesterday"
+                in 2..6 -> "$d days ago"
+                else -> try {
+                    SimpleDateFormat("d MMM", Locale.getDefault()).format(fmt.parse(date)!!)
+                } catch (e: Exception) {
+                    "Now streaming"
+                }
+            }
+        }
         private const val PREFS = "glass_setup"
         private const val KEY_ENABLED = "shelf_artwork"
 

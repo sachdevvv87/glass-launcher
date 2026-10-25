@@ -1,6 +1,8 @@
 package com.glass.launcher
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import dadb.AdbKeyPair
 import dadb.Dadb
 import java.io.File
@@ -21,6 +23,24 @@ object TvShell {
     fun run(context: Context, commands: List<String>): List<Pair<String, String>> {
         Dadb.create(HOST, PORT, keyPair(context), connectTimeout = 4000, socketTimeout = 60_000).use { adb ->
             return commands.map { cmd -> cmd to adb.shell(cmd).allOutput.trim() }
+        }
+    }
+
+    /**
+     * Android forgets the default Home app whenever Glass is updated (if another launcher is
+     * installed). Quietly sets it back. Does nothing if Glass is already the default or if this
+     * TV hasn't allowed Glass's debugging connection. Blocks: call off the main thread.
+     */
+    fun ensureDefaultHome(context: Context) {
+        val info = context.packageManager.resolveActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
+            PackageManager.MATCH_DEFAULT_ONLY,
+        )
+        if (info?.activityInfo?.packageName == context.packageName) return
+        try {
+            run(context, listOf("cmd package set-home-activity ${context.packageName}/${MainActivity::class.java.name}"))
+        } catch (t: Throwable) {
+            // Not authorised yet (or no debugging): Home Guard still sends Home to Glass.
         }
     }
 

@@ -42,6 +42,18 @@ class SetupActivity : Activity() {
         findViewById<View>(R.id.btn_restore).setOnClickListener { restoreLauncher() }
         findViewById<View>(R.id.btn_disable).setOnClickListener { disableSelected() }
         restoreAppsButton.setOnClickListener { restoreDisabledApps() }
+        findViewById<View>(R.id.btn_adblock).setOnClickListener { setAdBlock(AdBlock.Mode.ADGUARD) }
+        findViewById<View>(R.id.btn_adblock_family).setOnClickListener { setAdBlock(AdBlock.Mode.FAMILY) }
+        findViewById<View>(R.id.btn_adblock_off).setOnClickListener { setAdBlock(AdBlock.Mode.OFF) }
+        findViewById<View>(R.id.btn_rearrange).setOnClickListener {
+            // Back to Home, straight into Edit Home Screen mode.
+            startActivity(
+                Intent(this, MainActivity::class.java)
+                    .putExtra(MainActivity.EXTRA_EDIT, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+            finish()
+        }
         findViewById<View>(R.id.btn_artwork).setOnClickListener {
             ShelfContent.setEnabled(this, !ShelfContent.isEnabled(this))
             refresh()
@@ -67,6 +79,7 @@ class SetupActivity : Activity() {
         val stockText = if (stock.isEmpty()) getString(R.string.state_disabled) else getString(R.string.state_active)
         status.text = getString(R.string.setup_status, guard, homeLabel(), stockText)
         restoreAppsButton.text = getString(R.string.btn_restore_apps, disabledByGlass().size)
+        findViewById<TextView>(R.id.adblock_status).text = adBlockStatus()
         findViewById<TextView>(R.id.btn_artwork).text = getString(
             R.string.btn_artwork,
             getString(if (ShelfContent.isEnabled(this)) R.string.state_on else R.string.state_off),
@@ -182,6 +195,41 @@ class SetupActivity : Activity() {
         runShell(apps.map { "pm enable $it" }) { prefs.edit().remove(KEY_DISABLED).apply() }
     }
 
+    private fun adBlockStatus(): String {
+        // Newer Android versions may not let apps read this setting; fall back to what we last set.
+        val mode = AdBlock.current(this)
+            ?: AdBlock.customHost(this)?.takeIf { it.isNotBlank() }?.let { return getString(R.string.adblock_custom, it) }
+            ?: prefs.getString(KEY_ADBLOCK, null)?.let { runCatching { AdBlock.Mode.valueOf(it) }.getOrNull() }
+            ?: AdBlock.Mode.OFF
+        return getString(
+            when (mode) {
+                AdBlock.Mode.OFF -> R.string.adblock_off
+                AdBlock.Mode.ADGUARD -> R.string.adblock_on
+                AdBlock.Mode.FAMILY -> R.string.adblock_on_family
+            }
+        )
+    }
+
+    private fun setAdBlock(mode: AdBlock.Mode) {
+        runShell(AdBlock.commands(mode)) { results ->
+            val output = results.associate { it }
+            if (mode == AdBlock.Mode.OFF) {
+                prefs.edit().putString(KEY_ADBLOCK, mode.name).apply()
+                return@runShell
+            }
+            val internet = output[AdBlock.CHECK_INTERNET].orEmpty()
+            if (AdBlock.looksBlocked(internet)) {
+                // DNS-over-TLS can't get through this network: without this the TV would be offline.
+                appendLog(getString(R.string.adblock_network_blocks))
+                main.post { runShell(AdBlock.commands(AdBlock.Mode.OFF)) { prefs.edit().remove(KEY_ADBLOCK).apply() } }
+                return@runShell
+            }
+            prefs.edit().putString(KEY_ADBLOCK, mode.name).apply()
+            val blocked = AdBlock.looksBlocked(output[AdBlock.CHECK_BLOCKED].orEmpty())
+            appendLog(getString(if (blocked) R.string.adblock_verified else R.string.adblock_pending))
+        }
+    }
+
     /** Runs commands through the TV's own ADB, then logs what happened. */
     private fun runShell(commands: List<String>, onDone: (List<Pair<String, String>>) -> Unit) {
         if (busy) return
@@ -234,5 +282,6 @@ class SetupActivity : Activity() {
     companion object {
         private const val KEY_DISABLED = "disabled_apps"
         private const val KEY_STOCK = "disabled_stock_launchers"
+        private const val KEY_ADBLOCK = "adblock_mode"
     }
 }

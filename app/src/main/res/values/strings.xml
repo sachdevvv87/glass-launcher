@@ -2,17 +2,36 @@
 <resources>
     <string name="app_name">Glass Launcher</string>
     <string name="settings">Settings</string>
-    <string name="move_hint">Move the app with the arrow buttons  ·  Press OK when done</string>
+    <string name="edit_hint_browsing">Press OK to pick up an app  ·  Back when done</string>
+    <string name="edit_hint_carrying">Arrows move the app  ·  OK drops it here</string>
     <string name="cannot_open">That can\'t be opened on this TV</string>
     <string name="shelf_credit">Artwork: TVmaze</string>
 
     <!-- Setup: home screen -->
     <string name="section_home">Home screen</string>
+    <string name="btn_rearrange">Rearrange apps</string>
+    <string name="btn_rearrange_caption">Opens Edit Home Screen: every icon wiggles. Press OK on an app to pick it up, move it with the arrows (up/down jump a whole row), press OK to drop it, then pick up the next one. Press Back when you\'re done. Also on the Home screen: hold OK on any app → Edit Home Screen or Move to Top Row, or hold OK on Settings → Rearrange Apps.</string>
     <string name="btn_artwork">Show artwork in the Top Shelf: %1$s</string>
-    <string name="btn_artwork_caption">For Netflix, Prime Video, YouTube, Apple TV, JioHotstar and other streaming apps, the Top Shelf shows backdrops of shows currently on that service, from tvmaze.com (refreshed twice a day). Android only lets its built-in launcher read the apps\' own posters.</string>
+    <string name="btn_artwork_caption">For Netflix, Prime Video, YouTube, Apple TV, JioHotstar and other streaming apps, the Top Shelf shows the newest releases on that service (new series first, then new seasons and episodes) with their backdrops, from tvmaze.com, checked every 3 hours. Android only lets its built-in launcher read the apps\' own posters.</string>
+
+    <!-- Setup: ad blocking -->
+    <string name="section_adblock">Ad blocking</string>
+    <string name="adblock_off">Ad blocking: Off</string>
+    <string name="adblock_on">Ad blocking: On (AdGuard DNS)</string>
+    <string name="adblock_on_family">Ad blocking: On (AdGuard Family: ads + adult sites)</string>
+    <string name="adblock_custom">Custom secure DNS in use: %1$s</string>
+    <string name="btn_adblock">Block ads and trackers</string>
+    <string name="btn_adblock_family">Block ads, trackers and adult sites</string>
+    <string name="btn_adblock_off">Turn ad blocking off</string>
+    <string name="adblock_caption">Uses Android\'s built-in Private DNS with AdGuard\'s free DNS, so ad and tracker servers are blocked for every app on the TV. No VPN or extra app. It can\'t remove YouTube or Netflix in-video ads, which come from the same servers as the videos. Needs USB debugging (see How this works).</string>
+    <string name="adblock_verified">Ad blocking is on: a test ad server was blocked and the internet still works.</string>
+    <string name="adblock_pending">Ad blocking is set. The test ad server wasn\'t blocked yet; it usually takes effect within a minute.</string>
+    <string name="adblock_network_blocks">Your network blocks secure DNS, so ad blocking would have taken the TV offline. It has been switched back off.</string>
 
     <!-- Context menu -->
     <string name="action_edit">Edit Home Screen</string>
+    <string name="action_rearrange">Rearrange Apps</string>
+    <string name="action_move_to_top">Move to Top Row</string>
     <string name="action_info">App Info</string>
     <string name="action_hide">Hide from Home Screen</string>
     <string name="action_uninstall">Delete App</string>

@@ -19,6 +19,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import kotlin.random.Random
 
 /**
  * Position 0 is an empty, full-width header that reserves room for the Top Shelf.
@@ -39,7 +40,9 @@ class AppAdapter(
     }
 
     val items = mutableListOf<AppEntry>()
-    private var movingKey: String? = null
+    /** Edit Home Screen mode: all icons wiggle; [heldKey] is the app currently being carried. */
+    private var editing = false
+    private var heldKey: String? = null
 
     init {
         setHasStableIds(true)
@@ -57,13 +60,17 @@ class AppAdapter(
         notifyItemMoved(from + 1, to + 1)
     }
 
-    fun setMoving(key: String?) {
-        val old = movingKey
-        movingKey = key
-        listOfNotNull(old, key).forEach { k ->
-            val i = items.indexOfFirst { it.key == k }
-            if (i >= 0) notifyItemChanged(i + 1, PAYLOAD_MOVING)
-        }
+    fun setEditing(on: Boolean, held: String?) {
+        if (on == editing && held == heldKey) return
+        editing = on
+        heldKey = held
+        notifyItemRangeChanged(1, items.size, PAYLOAD_MOVING)
+    }
+
+    private fun wiggleFor(key: String): Float = when {
+        !editing -> 0f
+        key == heldKey -> 2.4f
+        else -> 1.1f
     }
 
     override fun getItemCount() = items.size + 1
@@ -91,14 +98,14 @@ class AppAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (holder is TileHolder && payloads.contains(PAYLOAD_MOVING)) {
-            holder.setWiggle(items[position - 1].key == movingKey)
+            holder.setWiggle(wiggleFor(items[position - 1].key))
         } else {
             onBindViewHolder(holder, position)
         }
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-        if (holder is TileHolder) holder.setWiggle(false)
+        if (holder is TileHolder) holder.setWiggle(0f)
     }
 
     inner class TileHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -177,7 +184,7 @@ class AppAdapter(
                 banner.visibility = View.GONE
             }
             applyFocus(itemView.isFocused, animate = false)
-            setWiggle(e.key == movingKey)
+            setWiggle(wiggleFor(e.key))
         }
 
         private fun applyFocus(focused: Boolean, animate: Boolean) {
@@ -274,18 +281,25 @@ class AppAdapter(
             }
         }
 
-        fun setWiggle(on: Boolean) {
-            if (on && wiggle == null) {
-                wiggle = ObjectAnimator.ofFloat(tile, View.ROTATION, -1.6f, 1.6f).apply {
-                    duration = 120
-                    repeatCount = ValueAnimator.INFINITE
-                    repeatMode = ValueAnimator.REVERSE
-                    start()
-                }
-            } else if (!on) {
-                wiggle?.cancel()
-                wiggle = null
-                tile.rotation = 0f
+        private var wiggleAmount = 0f
+
+        /**
+         * Edit-mode wiggle: every icon wobbles gently, the one being carried wobbles harder.
+         * Each icon gets its own speed and phase so they don't move in lockstep, like tvOS.
+         */
+        fun setWiggle(amount: Float) {
+            if (amount == wiggleAmount) return
+            wiggleAmount = amount
+            wiggle?.cancel()
+            wiggle = null
+            tile.rotation = 0f
+            if (amount == 0f) return
+            wiggle = ObjectAnimator.ofFloat(tile, View.ROTATION, -amount, amount).apply {
+                duration = Random.nextLong(110, 160)
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = ValueAnimator.REVERSE
+                start()
+                currentPlayTime = Random.nextLong(0, duration)
             }
         }
     }

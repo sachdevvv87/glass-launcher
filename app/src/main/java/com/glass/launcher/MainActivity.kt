@@ -44,14 +44,16 @@ class MainActivity : Activity(), AppAdapter.Listener {
     private lateinit var layoutManager: GridLayoutManager
     private lateinit var adapter: AppAdapter
     private lateinit var arts: Array<ImageView>
+    private lateinit var shelfHeading: View
     private lateinit var shelfTitle: TextView
+    private lateinit var shelfSubtitle: TextView
     private lateinit var shelfFocus: View
     private lateinit var shelfDots: LinearLayout
     private lateinit var shelfCredit: View
     private lateinit var timePill: View
     private lateinit var shelfContent: ShelfContent
     private lateinit var gridShade: View
-    private lateinit var moveHint: View
+    private lateinit var moveHint: TextView
     private lateinit var menuOverlay: View
     private lateinit var menuPanel: LinearLayout
 
@@ -62,12 +64,22 @@ class MainActivity : Activity(), AppAdapter.Listener {
     /** Which show each streaming app's Top Shelf is currently on. */
     private val showIndex = HashMap<String, Int>()
     private val rotateShelf = Runnable { advanceShow(1) }
+    /** While Home is on screen, check for new releases every half hour (downloads at most every 3 h). */
+    private val liveRefresh = object : Runnable {
+        override fun run() {
+            refreshShows()
+            main.postDelayed(this, LIVE_CHECK_MS)
+        }
+    }
     private val artCache = LruCache<String, Bitmap>(8)
     private val artFades = arrayOfNulls<Animator>(2)
     private var frontArt = 0
     private var shownArtKey: String? = null
     private var loadGeneration = 0
     private var focusedKey: String? = null
+    /** Edit Home Screen mode (all icons wiggle). */
+    private var editMode = false
+    /** Index of the app being carried in edit mode, or -1. */
     private var movingIndex = -1
     private var pendingFocus = -1
     private var lastDirection = 0
@@ -93,7 +105,9 @@ class MainActivity : Activity(), AppAdapter.Listener {
         content = findViewById(R.id.content)
         grid = findViewById(R.id.grid)
         arts = arrayOf(findViewById(R.id.art_a), findViewById(R.id.art_b))
+        shelfHeading = findViewById(R.id.shelf_heading)
         shelfTitle = findViewById(R.id.shelf_title)
+        shelfSubtitle = findViewById(R.id.shelf_subtitle)
         shelfFocus = findViewById(R.id.shelf_focus)
         shelfDots = findViewById(R.id.shelf_dots)
         shelfCredit = findViewById(R.id.shelf_credit)
@@ -151,16 +165,24 @@ class MainActivity : Activity(), AppAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
-        // Fetch/refresh streaming artwork (cached; re-downloads at most every 12 hours).
-        net.execute {
-            shelfContent.refresh()
-            main.post { if (!isDestroyed) refreshShelf() }
-        }
+        // Streaming artwork: shown from cache straight away, re-downloaded when older than 3 hours.
+        main.removeCallbacks(liveRefresh)
+        liveRefresh.run()
+        // If Home Guard is on, the user locked Glass as Home: make sure it's still the default.
+        if (HomeGuardService.isEnabled(this)) net.execute { TvShell.ensureDefaultHome(this) }
     }
 
     override fun onPause() {
         main.removeCallbacks(rotateShelf)
+        main.removeCallbacks(liveRefresh)
         super.onPause()
+    }
+
+    private fun refreshShows() {
+        net.execute {
+            val changed = shelfContent.refresh()
+            if (changed) main.post { if (!isDestroyed) refreshShelf() }
+        }
     }
 
     override fun onDestroy() {
@@ -171,24 +193,30 @@ class MainActivity : Activity(), AppAdapter.Listener {
         super.onDestroy()
     }
 
-    /** Pressing Home while already on Home: jump back to the first app. */
+    /**
+     * Pressing Home while already on Home jumps back to the first app.
+     * Glass Launcher Settings' "Rearrange apps" button also lands here, asking for edit mode.
+     */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         closeMenu()
-        endMove()
+        exitEditMode()
         goHome()
+        if (intent.getBooleanExtra(EXTRA_EDIT, false)) enterEditMode()
     }
 
     private fun setUpShelf() {
-        // Padding gives the text shadow room, so it isn't clipped into a visible box.
+        // Padding gives the text shadows room, so they aren't clipped into a visible box.
         val pad = dp(24)
-        shelfTitle.setPadding(pad, pad, pad, pad)
-        shelfTitle.layoutParams = (shelfTitle.layoutParams as FrameLayout.LayoutParams).apply {
+        shelfTitle.setPadding(pad, pad, pad, dp(4))
+        shelfSubtitle.setPadding(pad, 0, pad, pad)
+        shelfHeading.layoutParams = (shelfHeading.layoutParams as FrameLayout.LayoutParams).apply {
             topMargin = m.titleTop - pad
             leftMargin = m.side - pad
         }
         shelfTitle.maxWidth = (m.screenW * 0.6f).toInt()
         shelfTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, m.titleSize)
+        shelfSubtitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, m.titleSize * 0.36f)
 
         timePill.layoutParams = (timePill.layoutParams as FrameLayout.LayoutParams).apply {
             topMargin = m.pillTop
@@ -206,6 +234,10 @@ class MainActivity : Activity(), AppAdapter.Listener {
             }
 
         shelfFocus.layoutParams = shelfFocus.layoutParams.apply { height = (m.headerH * 0.6f).toInt() }
+        // Edit-mode hint sits just above the dock, clear of the Top Shelf title.
+        moveHint.layoutParams = (moveHint.layoutParams as FrameLayout.LayoutParams).apply {
+            topMargin = m.headerH - m.dockPadTop - dp(64)
+        }
         shelfFocus.setOnFocusChangeListener { _, focused -> setShelfMode(focused) }
         shelfFocus.setOnClickListener { adapter.items.getOrNull(shelfIndex)?.let(::onTileClicked) }
     }
@@ -223,9 +255,9 @@ class MainActivity : Activity(), AppAdapter.Listener {
     }
 
     private fun onAppsLoaded(apps: List<AppEntry>) {
-        if (movingIndex >= 0) {
-            // An app was installed/removed mid-move: keep what the user did, then refresh.
-            endMove()
+        if (editMode) {
+            // An app was installed/removed mid-edit: keep what the user did, then refresh.
+            exitEditMode()
             reload()
             return
         }
@@ -275,11 +307,14 @@ class MainActivity : Activity(), AppAdapter.Listener {
         val shows = shelfContent.itemsFor(entry.key)
         if (shows.isEmpty()) {
             shelfTitle.text = entry.label
+            shelfSubtitle.visibility = View.GONE
             shelfCredit.visibility = View.GONE
             showArt(entry)
         } else {
             val show = shows[(showIndex[entry.key] ?: 0) % shows.size]
             shelfTitle.text = show.title
+            shelfSubtitle.text = show.subtitle()
+            shelfSubtitle.visibility = View.VISIBLE
             shelfCredit.visibility = View.VISIBLE
             // App artwork first; the show's backdrop fades in once loaded (instant when cached).
             if (shownArtKey?.startsWith("${entry.key}#") != true) showArt(entry)
@@ -308,6 +343,7 @@ class MainActivity : Activity(), AppAdapter.Listener {
 
     /** Re-applies the Top Shelf after artwork has been (re)loaded or switched off. */
     private fun refreshShelf() {
+        showIndex.clear() // new list: start each app on its newest show
         val position = focusedTile()?.second?.plus(1) ?: if (shelfFocus.isFocused) shelfIndex + 1 else -1
         if (position in 1..Metrics.COLUMNS) {
             shownArtKey = null
@@ -349,8 +385,8 @@ class MainActivity : Activity(), AppAdapter.Listener {
             val h = header.height.coerceAtLeast(1)
             ((header.bottom - h * 0.55f) / (h * 0.45f)).coerceIn(0f, 1f)
         }
-        shelfTitle.translationY = (header?.top ?: 0).toFloat()
-        shelfTitle.alpha = visible
+        shelfHeading.translationY = (header?.top ?: 0).toFloat()
+        shelfHeading.alpha = visible
         shelfCredit.alpha = visible
         timePill.alpha = visible
         shelfFocus.isFocusable = visible > 0.9f
@@ -433,7 +469,7 @@ class MainActivity : Activity(), AppAdapter.Listener {
     // ---- actions -------------------------------------------------------------------------
 
     override fun onTileClicked(entry: AppEntry) {
-        if (movingIndex >= 0) return
+        if (editMode) return
         val component = entry.component
         if (entry.isSettings || component == null) {
             safeStart(Intent(Settings.ACTION_SETTINGS))
@@ -459,16 +495,24 @@ class MainActivity : Activity(), AppAdapter.Listener {
     // ---- glass context menu --------------------------------------------------------------
 
     private fun openMenu(entry: AppEntry, index: Int) {
-        if (menuOpen || movingIndex >= 0) return
+        if (menuOpen || editMode) return
         val actions = mutableListOf<Pair<String, () -> Unit>>()
-        actions += getString(R.string.action_edit) to { startMove(index) }
         if (entry.isSettings) {
+            actions += getString(R.string.action_rearrange) to { enterEditMode() }
             actions += getString(R.string.action_glass_settings) to {
                 startActivity(Intent(this, SetupActivity::class.java))
             }
             actions += getString(R.string.action_show_hidden, repo.hiddenCount()) to { repo.clearHidden(); reload() }
             actions += getString(R.string.action_reset) to { repo.resetLayout(); reload() }
         } else {
+            // Edit Home Screen: start rearranging with this app already picked up.
+            actions += getString(R.string.action_edit) to {
+                enterEditMode(index)
+                pickUp(index)
+            }
+            if (index >= Metrics.COLUMNS) {
+                actions += getString(R.string.action_move_to_top) to { moveToTopRow(index) }
+            }
             val pkg = Uri.parse("package:${entry.key}")
             actions += getString(R.string.action_info) to {
                 safeStart(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
@@ -554,30 +598,71 @@ class MainActivity : Activity(), AppAdapter.Listener {
         if (menuReturnPosition > 0) requestFocusAt(menuReturnPosition)
     }
 
-    // ---- edit ("jiggle") mode ------------------------------------------------------------
+    // ---- Edit Home Screen ("jiggle") mode -------------------------------------------------
+    //
+    // Like tvOS: every icon wiggles. Browse with the arrows, OK picks an app up, the arrows carry
+    // it (up/down jump a whole row), OK drops it. Back finishes and saves.
 
-    private fun startMove(index: Int) {
-        if (index !in adapter.items.indices) return
+    /** Starts edit mode, focusing [focusIndex] (or the current/first app). */
+    private fun enterEditMode(focusIndex: Int = -1) {
+        if (adapter.items.isEmpty()) return
+        editMode = true
+        movingIndex = -1
+        adapter.setEditing(true, null)
+        updateEditHint()
+        val target = when {
+            focusIndex >= 0 -> focusIndex
+            else -> focusedTile()?.second ?: 0
+        }
+        focusPosition(target + 1)
+    }
+
+    private fun pickUp(index: Int) {
+        if (!editMode || index !in adapter.items.indices) return
         movingIndex = index
-        adapter.setMoving(adapter.items[index].key)
-        moveHint.visibility = View.VISIBLE
-        focusPosition(index + 1)
+        adapter.setEditing(true, adapter.items[index].key)
+        updateEditHint()
+    }
+
+    private fun drop() {
+        if (movingIndex < 0) return
+        movingIndex = -1
+        adapter.setEditing(true, null)
+        repo.saveOrder(adapter.items.map { it.key })
+        updateEditHint()
+    }
+
+    private fun exitEditMode() {
+        if (!editMode) return
+        drop()
+        editMode = false
+        adapter.setEditing(false, null)
+        repo.saveOrder(adapter.items.map { it.key })
+        moveHint.visibility = View.GONE
     }
 
     private fun moveBy(delta: Int) {
-        val target = movingIndex + delta
-        if (target !in adapter.items.indices) return
+        val target = (movingIndex + delta).coerceIn(0, adapter.items.size - 1)
+        if (target == movingIndex) return
         adapter.move(movingIndex, target)
         movingIndex = target
-        requestFocusAt(target + 1)
+        focusPosition(target + 1)
+        // Carried into the dock: show its Top Shelf, so the title and artwork stay in step.
+        if (target < Metrics.COLUMNS) showShelf(target)
     }
 
-    private fun endMove() {
-        if (movingIndex < 0) return
-        movingIndex = -1
-        adapter.setMoving(null)
-        moveHint.visibility = View.GONE
+    /** "Move to Top Row": puts the app at the end of the dock; the dock's last app moves down a row. */
+    private fun moveToTopRow(index: Int) {
+        val target = minOf(Metrics.COLUMNS - 1, adapter.items.size - 1)
+        if (index <= target) return
+        adapter.move(index, target)
         repo.saveOrder(adapter.items.map { it.key })
+        focusPosition(target + 1)
+    }
+
+    private fun updateEditHint() {
+        moveHint.setText(if (movingIndex >= 0) R.string.edit_hint_carrying else R.string.edit_hint_browsing)
+        moveHint.visibility = View.VISIBLE
     }
 
     // ---- keys ----------------------------------------------------------------------------
@@ -600,17 +685,30 @@ class MainActivity : Activity(), AppAdapter.Listener {
             return super.dispatchKeyEvent(event)
         }
 
-        if (movingIndex >= 0) {
-            when (code) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> { if (down) moveBy(-1); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> { if (down) moveBy(1); return true }
-                KeyEvent.KEYCODE_DPAD_UP -> { if (down) moveBy(-Metrics.COLUMNS); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { if (down) moveBy(Metrics.COLUMNS); return true }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
-                KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> {
-                    if (!down) endMove()
+        if (editMode) {
+            val ok = code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER ||
+                code == KeyEvent.KEYCODE_NUMPAD_ENTER
+            val finish = code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_ESCAPE ||
+                code == KeyEvent.KEYCODE_MENU
+            when {
+                // Carrying an app: arrows move it, OK drops it.
+                movingIndex >= 0 && code == KeyEvent.KEYCODE_DPAD_LEFT -> { if (down) moveBy(-1); return true }
+                movingIndex >= 0 && code == KeyEvent.KEYCODE_DPAD_RIGHT -> { if (down) moveBy(1); return true }
+                movingIndex >= 0 && code == KeyEvent.KEYCODE_DPAD_UP -> { if (down) moveBy(-Metrics.COLUMNS); return true }
+                movingIndex >= 0 && code == KeyEvent.KEYCODE_DPAD_DOWN -> { if (down) moveBy(Metrics.COLUMNS); return true }
+                ok -> {
+                    // Act on release, and swallow the press so it never launches the app.
+                    if (!down) {
+                        if (movingIndex >= 0) drop() else focusedTile()?.let { pickUp(it.second) }
+                    }
                     return true
                 }
+                finish -> {
+                    if (!down) exitEditMode()
+                    return true
+                }
+                // Not carrying: arrows browse normally (falls through), but never into the Top Shelf.
+                code == KeyEvent.KEYCODE_DPAD_UP && (focusedTile()?.second ?: Int.MAX_VALUE) < Metrics.COLUMNS -> return true
             }
         }
 
@@ -661,8 +759,11 @@ class MainActivity : Activity(), AppAdapter.Listener {
     }
 
     companion object {
+        /** Intent extra: open Home straight into Edit Home Screen mode. */
+        const val EXTRA_EDIT = "com.glass.launcher.EDIT_HOME"
         /** How long each show stays in a streaming app's Top Shelf before the next one. */
         private const val ROTATE_MS = 9_000L
+        private const val LIVE_CHECK_MS = 30 * 60 * 1000L
         private val DIRECTIONS = setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,

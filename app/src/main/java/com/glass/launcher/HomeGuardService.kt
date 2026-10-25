@@ -37,6 +37,12 @@ class HomeGuardService : AccessibilityService() {
 
     override fun onInterrupt() = Unit
 
+    /** Runs when the guard starts, including right after Glass is updated: repair the default Home. */
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        Thread { TvShell.ensureDefaultHome(applicationContext) }.start()
+    }
+
     private fun bringGlassHome() {
         val now = SystemClock.uptimeMillis()
         if (now - lastLaunch < 400) return
