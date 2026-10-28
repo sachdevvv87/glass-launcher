@@ -46,12 +46,14 @@ class MainActivity : Activity(), AppAdapter.Listener {
     private lateinit var arts: Array<ImageView>
     private lateinit var shelfHeading: View
     private lateinit var shelfTitle: TextView
-    private lateinit var shelfSubtitle: TextView
     private lateinit var shelfFocus: View
     private lateinit var shelfDots: LinearLayout
-    private lateinit var shelfCredit: View
+    private lateinit var theme: GlassTheme
+    private lateinit var wallpapers: Wallpapers
+    /** Today's Tron wallpaper, the Home background (when switched on). */
+    private var wallPhoto: Wallpapers.Photo? = null
+    private var wallBitmap: Bitmap? = null
     private lateinit var timePill: View
-    private lateinit var shelfContent: ShelfContent
     private lateinit var gridShade: View
     private lateinit var moveHint: TextView
     private lateinit var menuOverlay: View
@@ -61,16 +63,6 @@ class MainActivity : Activity(), AppAdapter.Listener {
     private val io = Executors.newSingleThreadExecutor()
     private val net = Executors.newSingleThreadExecutor()
     private val ease = DecelerateInterpolator(2f)
-    /** Which show each streaming app's Top Shelf is currently on. */
-    private val showIndex = HashMap<String, Int>()
-    private val rotateShelf = Runnable { advanceShow(1) }
-    /** While Home is on screen, check for new releases every half hour (downloads at most every 3 h). */
-    private val liveRefresh = object : Runnable {
-        override fun run() {
-            refreshShows()
-            main.postDelayed(this, LIVE_CHECK_MS)
-        }
-    }
     private val artCache = LruCache<String, Bitmap>(8)
     private val artFades = arrayOfNulls<Animator>(2)
     private var frontArt = 0
@@ -107,12 +99,9 @@ class MainActivity : Activity(), AppAdapter.Listener {
         arts = arrayOf(findViewById(R.id.art_a), findViewById(R.id.art_b))
         shelfHeading = findViewById(R.id.shelf_heading)
         shelfTitle = findViewById(R.id.shelf_title)
-        shelfSubtitle = findViewById(R.id.shelf_subtitle)
         shelfFocus = findViewById(R.id.shelf_focus)
         shelfDots = findViewById(R.id.shelf_dots)
-        shelfCredit = findViewById(R.id.shelf_credit)
         timePill = findViewById(R.id.time_pill)
-        shelfContent = ShelfContent(this)
         gridShade = findViewById(R.id.grid_shade)
         moveHint = findViewById(R.id.move_hint)
         menuOverlay = findViewById(R.id.menu_overlay)
@@ -120,10 +109,13 @@ class MainActivity : Activity(), AppAdapter.Listener {
 
         val gridSide = m.side - m.gap / 2
         grid.setPadding(gridSide, 0, gridSide, m.rowGap)
+        theme = Themes.current(this)
+        wallpapers = Wallpapers(this)
         setUpShelf()
+        applyTheme()
         menuPanel.layoutParams = menuPanel.layoutParams.apply { width = m.menuWidth }
 
-        adapter = AppAdapter(this, m)
+        adapter = AppAdapter(this, m, theme)
         layoutManager = object : GridLayoutManager(this@MainActivity, Metrics.COLUMNS) {
             // Scrolling is driven by alignRow() so rows settle where tvOS puts them,
             // instead of RecyclerView's default "scroll just enough".
@@ -136,7 +128,7 @@ class MainActivity : Activity(), AppAdapter.Listener {
         }
         grid.layoutManager = layoutManager
         grid.adapter = adapter
-        grid.addItemDecoration(DockDecoration(this, m))
+        grid.addItemDecoration(DockDecoration(this, m, theme))
         grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) = syncShelf()
         })
@@ -165,24 +157,59 @@ class MainActivity : Activity(), AppAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
-        // Streaming artwork: shown from cache straight away, re-downloaded when older than 3 hours.
-        main.removeCallbacks(liveRefresh)
-        liveRefresh.run()
+        // Theme switched in Glass Launcher Settings: rebuild the screen in the new look.
+        if (Themes.current(this) != theme) {
+            recreate()
+            return
+        }
+        loadWallpaper()
         // If Home Guard is on, the user locked Glass as Home: make sure it's still the default.
         if (HomeGuardService.isEnabled(this)) net.execute { TvShell.ensureDefaultHome(this) }
     }
 
-    override fun onPause() {
-        main.removeCallbacks(rotateShelf)
-        main.removeCallbacks(liveRefresh)
-        super.onPause()
+    /** Shows today's Tron wallpaper as the Home background (a new one each day), if switched on. */
+    private fun loadWallpaper() {
+        if (!Themes.dailyWallpaper(this)) {
+            findViewById<GridBackgroundView>(R.id.grid_floor).wallpaperBehind = false
+            if (wallBitmap != null) {
+                wallPhoto = null
+                wallBitmap = null
+                refreshShelf()
+            }
+            return
+        }
+        val liveGrid = theme == GlassTheme.GRID
+        findViewById<GridBackgroundView>(R.id.grid_floor).wallpaperBehind = true
+        net.execute {
+            val photo = wallpapers.photoOfTheDay()
+            val bmp = photo?.let { wallpapers.bitmap(it, m.screenW, underLiveGrid = liveGrid) }
+            main.post {
+                if (isDestroyed || bmp == null || photo?.key == wallPhoto?.key) return@post
+                wallPhoto = photo
+                wallBitmap = bmp
+                refreshShelf()
+            }
+        }
     }
 
-    private fun refreshShows() {
-        net.execute {
-            val changed = shelfContent.refresh()
-            if (changed) main.post { if (!isDestroyed) refreshShelf() }
+    /** Grid theme: Tron floor, Orbitron lettering, neon pills and menus. */
+    private fun applyTheme() {
+        if (theme != GlassTheme.GRID) return
+        findViewById<View>(R.id.grid_floor).visibility = View.VISIBLE
+        val face = Themes.gridTypeface(this)
+        shelfTitle.typeface = face ?: shelfTitle.typeface
+        shelfTitle.isAllCaps = true
+        shelfTitle.letterSpacing = 0.06f
+        shelfTitle.setShadowLayer(dp(10).toFloat(), 0f, 0f, Themes.NEON_DIM)
+        timePill.setBackgroundResource(R.drawable.tron_pill)
+        findViewById<TextClock>(R.id.clock).apply {
+            face?.let { typeface = it }
+            setTextColor(Themes.NEON)
         }
+        moveHint.setBackgroundResource(R.drawable.tron_pill)
+        moveHint.setTextColor(Themes.NEON)
+        moveHint.isAllCaps = true
+        menuPanel.setBackgroundResource(R.drawable.tron_panel)
     }
 
     override fun onDestroy() {
@@ -208,15 +235,13 @@ class MainActivity : Activity(), AppAdapter.Listener {
     private fun setUpShelf() {
         // Padding gives the text shadows room, so they aren't clipped into a visible box.
         val pad = dp(24)
-        shelfTitle.setPadding(pad, pad, pad, dp(4))
-        shelfSubtitle.setPadding(pad, 0, pad, pad)
+        shelfTitle.setPadding(pad, pad, pad, pad)
         shelfHeading.layoutParams = (shelfHeading.layoutParams as FrameLayout.LayoutParams).apply {
             topMargin = m.titleTop - pad
             leftMargin = m.side - pad
         }
         shelfTitle.maxWidth = (m.screenW * 0.6f).toInt()
         shelfTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, m.titleSize)
-        shelfSubtitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, m.titleSize * 0.36f)
 
         timePill.layoutParams = (timePill.layoutParams as FrameLayout.LayoutParams).apply {
             topMargin = m.pillTop
@@ -277,7 +302,6 @@ class MainActivity : Activity(), AppAdapter.Listener {
     override fun onTileFocused(entry: AppEntry, position: Int) {
         focusedKey = entry.key
         main.removeCallbacks(artTask)
-        main.removeCallbacks(rotateShelf)
         if (position in 1..Metrics.COLUMNS) {
             showShelf(position - 1)
         } else {
@@ -296,54 +320,17 @@ class MainActivity : Activity(), AppAdapter.Listener {
         if (dy != 0) grid.smoothScrollBy(0, dy, ease, 420)
     }
 
-    /**
-     * Shows a dock app's Top Shelf. Streaming apps get a real show backdrop and title (from TVmaze),
-     * cycling through their current shows; other apps get their own artwork and name.
-     */
+    /** Shows a dock app's Top Shelf: today's wallpaper (or the app's own colours) and its name. */
     private fun showShelf(index: Int) {
         val entry = adapter.items.getOrNull(index) ?: return
         shelfIndex = index
-        main.removeCallbacks(rotateShelf)
-        val shows = shelfContent.itemsFor(entry.key)
-        if (shows.isEmpty()) {
-            shelfTitle.text = entry.label
-            shelfSubtitle.visibility = View.GONE
-            shelfCredit.visibility = View.GONE
-            showArt(entry)
-        } else {
-            val show = shows[(showIndex[entry.key] ?: 0) % shows.size]
-            shelfTitle.text = show.title
-            shelfSubtitle.text = show.subtitle()
-            shelfSubtitle.visibility = View.VISIBLE
-            shelfCredit.visibility = View.VISIBLE
-            // App artwork first; the show's backdrop fades in once loaded (instant when cached).
-            if (shownArtKey?.startsWith("${entry.key}#") != true) showArt(entry)
-            val key = "${entry.key}#${show.showId}"
-            net.execute {
-                val bmp = shelfContent.bitmap(show, m.screenW)
-                main.post {
-                    val stillHere = adapter.items.getOrNull(shelfIndex)?.key == entry.key
-                    if (bmp != null && stillHere && !isDestroyed) crossfadeArt(bmp, key)
-                }
-            }
-            if (shows.size > 1) main.postDelayed(rotateShelf, ROTATE_MS)
-        }
+        shelfTitle.text = entry.label
+        showArt(entry)
         buildDots()
     }
 
-    /** Next/previous show in the focused streaming app's Top Shelf. */
-    private fun advanceShow(delta: Int): Boolean {
-        val entry = adapter.items.getOrNull(shelfIndex) ?: return false
-        val count = shelfContent.itemsFor(entry.key).size
-        if (count < 2) return false
-        showIndex[entry.key] = ((showIndex[entry.key] ?: 0) + delta + count) % count
-        showShelf(shelfIndex)
-        return true
-    }
-
-    /** Re-applies the Top Shelf after artwork has been (re)loaded or switched off. */
+    /** Re-applies the Top Shelf after the wallpaper has been loaded or switched off. */
     private fun refreshShelf() {
-        showIndex.clear() // new list: start each app on its newest show
         val position = focusedTile()?.second?.plus(1) ?: if (shelfFocus.isFocused) shelfIndex + 1 else -1
         if (position in 1..Metrics.COLUMNS) {
             shownArtKey = null
@@ -352,6 +339,13 @@ class MainActivity : Activity(), AppAdapter.Listener {
     }
 
     private fun showArt(entry: AppEntry) {
+        // Today's Tron wallpaper, when switched on; otherwise the app's own artwork.
+        val photo = wallPhoto
+        val wall = wallBitmap
+        if (photo != null && wall != null) {
+            crossfadeArt(wall, "wall:${photo.key}")
+            return
+        }
         if (entry.key == shownArtKey) return
         val art = artCache.get(entry.key) ?: Graphics.shelfArt(entry).also { artCache.put(entry.key, it) }
         crossfadeArt(art, entry.key)
@@ -387,7 +381,6 @@ class MainActivity : Activity(), AppAdapter.Listener {
         }
         shelfHeading.translationY = (header?.top ?: 0).toFloat()
         shelfHeading.alpha = visible
-        shelfCredit.alpha = visible
         timePill.alpha = visible
         shelfFocus.isFocusable = visible > 0.9f
         gridShade.alpha = 1f - visible
@@ -402,19 +395,10 @@ class MainActivity : Activity(), AppAdapter.Listener {
         shelfDots.animate().alpha(if (on) 1f else 0f).setDuration(300).start()
     }
 
-    /** Page dots: one per show for streaming apps, otherwise one per dock app. */
+    /** Page dots in the Top Shelf: one per dock app. */
     private fun buildDots() {
-        val entry = adapter.items.getOrNull(shelfIndex)
-        val shows = entry?.let { shelfContent.itemsFor(it.key) }.orEmpty()
-        val count: Int
-        val current: Int
-        if (entry != null && shows.size > 1) {
-            count = shows.size
-            current = (showIndex[entry.key] ?: 0) % count
-        } else {
-            count = minOf(Metrics.COLUMNS, adapter.items.size)
-            current = shelfIndex
-        }
+        val count = minOf(Metrics.COLUMNS, adapter.items.size)
+        val current = shelfIndex
         val size = dp(8)
         if (shelfDots.childCount != count) {
             shelfDots.removeAllViews()
@@ -523,12 +507,22 @@ class MainActivity : Activity(), AppAdapter.Listener {
 
         menuPanel.removeAllViews()
         menuItems.clear()
+        val grid = theme == GlassTheme.GRID
         val title = layoutInflater.inflate(R.layout.menu_title, menuPanel, false) as TextView
         title.text = entry.label
+        if (grid) {
+            title.setTextColor(Themes.NEON)
+            title.isAllCaps = true
+            title.letterSpacing = 0.1f
+        }
         menuPanel.addView(title)
         for ((label, action) in actions) {
             val item = layoutInflater.inflate(R.layout.menu_item, menuPanel, false) as TextView
             item.text = label
+            if (grid) {
+                item.setBackgroundResource(R.drawable.tron_menu_item_bg)
+                item.setTextColor(ContextCompat.getColorStateList(this, R.color.tron_menu_text))
+            }
             item.setOnClickListener {
                 closeMenu()
                 action()
@@ -712,7 +706,7 @@ class MainActivity : Activity(), AppAdapter.Listener {
             }
         }
 
-        // In the Top Shelf: left/right page through a streaming app's shows (or the dock apps);
+        // In the Top Shelf: left/right page through the dock apps;
         // down or Back returns to the dock.
         if (shelfFocus.isFocused) {
             val count = minOf(Metrics.COLUMNS, adapter.items.size)
@@ -722,11 +716,11 @@ class MainActivity : Activity(), AppAdapter.Listener {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    if (down && !advanceShow(-1) && count > 0) showShelf((shelfIndex - 1 + count) % count)
+                    if (down && count > 0) showShelf((shelfIndex - 1 + count) % count)
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    if (down && !advanceShow(1) && count > 0) showShelf((shelfIndex + 1) % count)
+                    if (down && count > 0) showShelf((shelfIndex + 1) % count)
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_UP -> return true
@@ -761,9 +755,6 @@ class MainActivity : Activity(), AppAdapter.Listener {
     companion object {
         /** Intent extra: open Home straight into Edit Home Screen mode. */
         const val EXTRA_EDIT = "com.glass.launcher.EDIT_HOME"
-        /** How long each show stays in a streaming app's Top Shelf before the next one. */
-        private const val ROTATE_MS = 9_000L
-        private const val LIVE_CHECK_MS = 30 * 60 * 1000L
         private val DIRECTIONS = setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,

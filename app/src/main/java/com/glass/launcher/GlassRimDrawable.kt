@@ -10,8 +10,15 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
 
-/** The thin Liquid Glass edge: bright along the top where light catches it, faint below. */
-class GlassRimDrawable(private val radius: Float, private val stroke: Float) : Drawable() {
+/**
+ * The thin Liquid Glass edge: bright along the top where light catches it, faint below.
+ * With [neon] it becomes a Tron light-line instead: an even cyan edge.
+ */
+class GlassRimDrawable(
+    private val radius: Float,
+    private val stroke: Float,
+    private val neon: Boolean = false,
+) : Drawable() {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -22,11 +29,14 @@ class GlassRimDrawable(private val radius: Float, private val stroke: Float) : D
     override fun onBoundsChange(bounds: Rect) {
         rect.set(bounds)
         rect.inset(stroke / 2f, stroke / 2f)
+        val colors = if (neon) {
+            intArrayOf(Themes.NEON, 0xCC2BE6FF.toInt(), Themes.NEON)
+        } else {
+            intArrayOf(0x99FFFFFF.toInt(), 0x14FFFFFF, 0x38FFFFFF)
+        }
         paint.shader = LinearGradient(
             0f, bounds.top.toFloat(), 0f, bounds.bottom.toFloat(),
-            intArrayOf(0x99FFFFFF.toInt(), 0x14FFFFFF, 0x38FFFFFF),
-            floatArrayOf(0f, 0.55f, 1f),
-            Shader.TileMode.CLAMP,
+            colors, floatArrayOf(0f, 0.55f, 1f), Shader.TileMode.CLAMP,
         )
     }
 

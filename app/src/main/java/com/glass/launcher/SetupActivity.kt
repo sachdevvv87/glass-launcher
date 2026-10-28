@@ -54,11 +54,50 @@ class SetupActivity : Activity() {
             )
             finish()
         }
-        findViewById<View>(R.id.btn_artwork).setOnClickListener {
-            ShelfContent.setEnabled(this, !ShelfContent.isEnabled(this))
+        findViewById<View>(R.id.btn_select_recommended).setOnClickListener {
+            selected += Debloat.candidates(this).filter { it.recommended }.map { it.pkg }
+            buildBloatList()
+        }
+        findViewById<View>(R.id.btn_theme).setOnClickListener {
+            val next = if (Themes.current(this) == GlassTheme.GRID) GlassTheme.GLASS else GlassTheme.GRID
+            Themes.set(this, next)
+            refresh() // Home rebuilds itself in the new theme when you go back
+        }
+        findViewById<View>(R.id.btn_f1_wall).setOnClickListener {
+            Themes.setDailyWallpaper(this, !Themes.dailyWallpaper(this))
             refresh()
         }
+        findViewById<View>(R.id.btn_screensaver).setOnClickListener { useGridScreensaver() }
+        findViewById<View>(R.id.btn_preview).setOnClickListener {
+            startActivity(Intent(this, ScreensaverPreviewActivity::class.java))
+        }
+        findViewById<View>(R.id.btn_photos).setOnClickListener {
+            if (Wallpapers(this).hasPhotoPermission()) {
+                appendLog(getString(R.string.photos_already))
+            } else {
+                requestPermissions(arrayOf(Wallpapers.photoPermission()), REQUEST_PHOTOS)
+            }
+        }
         findViewById<View>(R.id.btn_lock).requestFocus()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_PHOTOS) return
+        val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
+        appendLog(getString(if (granted) R.string.photos_granted else R.string.photos_denied))
+    }
+
+    /** Makes the Glass Grid screensaver the TV's screensaver. */
+    private fun useGridScreensaver() {
+        val dream = "$packageName/${GridDreamService::class.java.name}"
+        runShell(
+            listOf(
+                "settings put secure screensaver_components $dream",
+                "settings put secure screensaver_enabled 1",
+                "settings put secure screensaver_activate_on_sleep 1",
+            )
+        ) { appendLog(getString(R.string.screensaver_set)) }
     }
 
     override fun onResume() {
@@ -78,11 +117,15 @@ class SetupActivity : Activity() {
         val stock = Debloat.STOCK_LAUNCHERS.filter { Debloat.isEnabled(this, it) }
         val stockText = if (stock.isEmpty()) getString(R.string.state_disabled) else getString(R.string.state_active)
         status.text = getString(R.string.setup_status, guard, homeLabel(), stockText)
-        restoreAppsButton.text = getString(R.string.btn_restore_apps, disabledByGlass().size)
+        restoreAppsButton.text = getString(R.string.btn_restore_apps, appsToRestore().size)
         findViewById<TextView>(R.id.adblock_status).text = adBlockStatus()
-        findViewById<TextView>(R.id.btn_artwork).text = getString(
-            R.string.btn_artwork,
-            getString(if (ShelfContent.isEnabled(this)) R.string.state_on else R.string.state_off),
+        findViewById<TextView>(R.id.btn_theme).text = getString(
+            R.string.btn_theme,
+            getString(if (Themes.current(this) == GlassTheme.GRID) R.string.theme_grid else R.string.theme_glass),
+        )
+        findViewById<TextView>(R.id.btn_f1_wall).text = getString(
+            R.string.btn_f1_wall,
+            getString(if (Themes.dailyWallpaper(this)) R.string.state_on else R.string.state_off),
         )
         buildBloatList()
     }
@@ -114,8 +157,9 @@ class SetupActivity : Activity() {
             val row = layoutInflater.inflate(R.layout.row_bloat, bloatList, false)
             val check = row.findViewById<View>(R.id.check)
             row.findViewById<TextView>(R.id.name).text = c.label
+            val tag = if (c.recommended) getString(R.string.tag_recommended) + "  ·  " else ""
             row.findViewById<TextView>(R.id.detail).text =
-                if (c.note.isEmpty()) c.pkg else "${c.note}  ·  ${c.pkg}"
+                tag + if (c.note.isEmpty()) c.pkg else "${c.note}  ·  ${c.pkg}"
             fun paint() = check.setBackgroundResource(
                 if (c.pkg in selected) R.drawable.check_on else R.drawable.check_off
             )
@@ -186,8 +230,13 @@ class SetupActivity : Activity() {
         }
     }
 
+    /** Apps Glass disabled, plus any known bloat disabled some other way (a PC, cleanyourtv). */
+    private fun appsToRestore(): Set<String> =
+        disabledByGlass().filter { Debloat.isInstalled(this, it) && !Debloat.isEnabled(this, it) }.toSet() +
+            Debloat.disabledKnown(this)
+
     private fun restoreDisabledApps() {
-        val apps = disabledByGlass()
+        val apps = appsToRestore()
         if (apps.isEmpty()) {
             appendLog(getString(R.string.log_nothing_to_restore))
             return
@@ -283,5 +332,6 @@ class SetupActivity : Activity() {
         private const val KEY_DISABLED = "disabled_apps"
         private const val KEY_STOCK = "disabled_stock_launchers"
         private const val KEY_ADBLOCK = "adblock_mode"
+        private const val REQUEST_PHOTOS = 7
     }
 }

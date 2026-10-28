@@ -73,6 +73,13 @@
                 android:layout_marginBottom="10dp"
                 android:text="@string/section_bloat_body" />
 
+            <TextView
+                android:id="@+id/btn_select_recommended"
+                style="@style/Glass.Button"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="10dp"
+                android:text="@string/btn_select_recommended" />
+
             <LinearLayout
                 android:id="@+id/bloat_list"
                 android:layout_width="match_parent"
@@ -87,6 +94,45 @@
             <TextView
                 android:id="@+id/btn_enable_all"
                 style="@style/Glass.Button" />
+        </LinearLayout>
+
+        <!-- Theme and screensaver -->
+        <LinearLayout style="@style/Glass.Card">
+
+            <TextView
+                style="@style/Glass.Heading"
+                android:text="@string/section_look" />
+
+            <TextView
+                android:id="@+id/btn_theme"
+                style="@style/Glass.Button" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/btn_theme_caption" />
+
+            <TextView
+                android:id="@+id/btn_f1_wall"
+                style="@style/Glass.Button" />
+
+            <TextView
+                android:id="@+id/btn_screensaver"
+                style="@style/Glass.Button"
+                android:text="@string/btn_screensaver" />
+
+            <TextView
+                android:id="@+id/btn_preview"
+                style="@style/Glass.Button"
+                android:text="@string/btn_preview" />
+
+            <TextView
+                android:id="@+id/btn_photos"
+                style="@style/Glass.Button"
+                android:text="@string/btn_photos" />
+
+            <TextView
+                style="@style/Glass.Caption"
+                android:text="@string/f1_caption" />
         </LinearLayout>
 
         <!-- Ad blocking -->
@@ -136,14 +182,6 @@
             <TextView
                 style="@style/Glass.Caption"
                 android:text="@string/btn_rearrange_caption" />
-
-            <TextView
-                android:id="@+id/btn_artwork"
-                style="@style/Glass.Button" />
-
-            <TextView
-                style="@style/Glass.Caption"
-                android:text="@string/btn_artwork_caption" />
         </LinearLayout>
 
         <!-- Help -->

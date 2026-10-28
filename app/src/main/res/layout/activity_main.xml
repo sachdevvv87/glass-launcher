@@ -47,6 +47,13 @@
             android:alpha="0"
             android:background="#B3000000" />
 
+        <!-- Grid theme: Tron floor, horizon glow and light cycles. -->
+        <com.glass.launcher.GridBackgroundView
+            android:id="@+id/grid_floor"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/grid"
             android:layout_width="match_parent"
@@ -56,7 +63,7 @@
             android:overScrollMode="never"
             android:scrollbars="none" />
 
-        <!-- Big title, top left, with what's new underneath ("New season · Yesterday"). -->
+        <!-- Big title, top left: the focused app's name. -->
         <LinearLayout
             android:id="@+id/shelf_heading"
             android:layout_width="wrap_content"
@@ -76,18 +83,6 @@
                 android:shadowRadius="16"
                 android:textColor="#FFFFFFFF"
                 android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/shelf_subtitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-medium"
-                android:maxLines="1"
-                android:shadowColor="#B3000000"
-                android:shadowDy="2"
-                android:shadowRadius="10"
-                android:textColor="#E6FFFFFF"
-                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Invisible target above the dock: pressing Up "enters" the Top Shelf. -->
@@ -108,19 +103,6 @@
             android:layout_marginBottom="40dp"
             android:alpha="0"
             android:orientation="horizontal" />
-
-        <!-- TVmaze's licence asks for a credit wherever its data is shown. -->
-        <TextView
-            android:id="@+id/shelf_credit"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top|end"
-            android:layout_marginTop="76dp"
-            android:layout_marginEnd="36dp"
-            android:text="@string/shelf_credit"
-            android:textColor="#80FFFFFF"
-            android:textSize="11sp"
-            android:visibility="gone" />
 
         <!-- Clock + profile, top right. -->
         <LinearLayout

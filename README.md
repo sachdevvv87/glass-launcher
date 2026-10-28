@@ -1,10 +1,14 @@
 # Glass Launcher: a tvOS 26-style Home screen for Android TV
 
-A Home screen for Android TV / Google TV laid out like Apple's tvOS 26 (Liquid Glass).
-Not affiliated with Apple; no Apple code, assets or branding are used.
+A Home screen for Android TV / Google TV laid out like Apple's tvOS 26, with two looks: Liquid
+Glass, and **Grid**, a neon theme in the spirit of Tron: Legacy with its own generated wallpapers
+and screensaver. Not affiliated with Apple or Disney; no Apple or film code, assets or branding
+are used.
 
-| App grid | Glass context menu |
+| Grid theme (Tron) | Glass Grid screensaver |
 |---|---|
+| ![Grid theme Home](docs/grid-home.png) | ![Grid screensaver](docs/grid-screensaver.png) |
+| **Glass theme: app grid** | **Glass context menu** |
 | ![App grid](docs/grid.png) | ![Context menu](docs/menu.png) |
 
 *Screenshots from a Realme Android TV (Android 11, 1280×720).*
@@ -13,8 +17,8 @@ Not affiliated with Apple; no Apple code, assets or branding are used.
 
 ## Features
 
-- **Full-screen Top Shelf.** The focused app's artwork fills the whole screen with a slow
-  push-in, and its name appears as a big title in the top-left corner.
+- **Full-screen Top Shelf.** Today's Tron wallpaper (or the focused app's own colours) fills the
+  whole screen with a slow push-in, and the app's name appears as a big title in the top-left corner.
 - **Clock + profile pill** in the top-right corner.
 - **Liquid Glass dock.** The top row of 6 apps sits on a frosted rounded panel ~76% down the
   screen; the next row only just peeks in at the bottom.
@@ -43,18 +47,31 @@ that a test ad server is blocked and that the internet still works. If your netw
 secure DNS, it switches itself back off. DNS blocking can't remove YouTube/Netflix in-video ads,
 which are served from the same servers as the videos.
 
-### Top Shelf artwork
-- **Streaming apps** (Netflix, Prime Video, YouTube, Apple TV, JioHotstar, Disney+, Hulu, Max,
-  Paramount+, Peacock) show the **newest releases** on that service: brand-new series first, then
-  new seasons, then new episodes, from the last 10 days. Each comes with a full-screen backdrop,
-  the show's title, and a line like *"New season · Season 4 · Yesterday"*, rotating every 9 seconds.
-  In the Top Shelf, left/right moves between shows.
-  Data and images come from [TVmaze](https://www.tvmaze.com) (free API, CC BY-SA), checked every
-  3 hours and cached on the TV. It can be switched off in Glass Launcher Settings → Home screen.
-- **Other apps** show their own TV banner (or icon), heavily blurred, with the app's name.
+### Grid theme (Tron)
+**Glass Launcher Settings → Theme and screensaver → Theme: Grid.** Black and neon, in the spirit of
+Tron: Legacy:
+- an animated neon **grid floor** flowing toward you, a glowing horizon, and **light cycles**
+  (cyan and orange) racing down the lanes;
+- icons with a cyan **light-line edge** that glows when focused; a dark dock with a light-line
+  border and corner brackets; neon clock pill, menus and hints;
+- **Orbitron** lettering for the title and clock.
 
-Android only lets its built-in launcher read the poster "channels" apps publish (the permission
-is reserved for system apps), so a third-party launcher can't show each app's own library images.
+The other theme, **Glass**, is the tvOS 26 Liquid Glass look.
+
+### Tron wallpapers and the Grid screensaver
+Glass **draws its own Tron-style wallpapers on the TV**: no downloads and no film images. There's a
+different set every day, in a different order with different layouts:
+*Light cycle* · *Cycle duel* · *Light jet* · *Patrol craft* · *Light cycles* · *The Grid at dusk* ·
+*Identity disc* · *Neon city* · *The portal*.
+
+- **Home background:** today's wallpaper fills the Top Shelf behind the app name. The live grid
+  floor runs on top and continues its horizon. Switch: *Daily Tron wallpaper on the Home screen*.
+- **Glass Grid screensaver:** today's wallpapers, each for 40 seconds with a slow drift, plus the
+  time and date in Orbitron. Set it with *Use the Grid screensaver*, or in Settings → Device
+  Preferences → Screen saver → **Glass Grid**. *Preview the screensaver* shows it right away.
+- **Your own wallpapers:** send pictures with LocalSend into a folder named **Tron** (or
+  **Wallpapers**), e.g. `Download/Tron`, then press *Let Glass show your own wallpapers*. They're
+  shown first, in a new order each day.
 
 ### Lock as main launcher + remove bloatware
 Open **Glass Launcher Settings** (it opens by itself on first launch, or hold OK on Settings):
@@ -63,9 +80,16 @@ Open **Glass Launcher Settings** (it opens by itself on first launch, or hold OK
   launcher (Google TV / Android TV Home), and turns on **Home Guard**.
 - **Home Guard** (an accessibility service) sends the remote's Home button to Glass and closes
   the original launcher whenever anything brings it back (boot, shortcuts, apps).
-- **Remove bloatware.** Tick preinstalled apps and press *Disable selected apps*. Apps are
-  *disabled*, not deleted: *Restore apps disabled by Glass* brings them all back. Entries marked
-  "Warning" turn off a feature (voice search, casting, phone remote).
+- **Remove bloatware.** Tick preinstalled apps and press *Disable selected apps*, or press
+  **Select recommended** first. Apps are *disabled*, not deleted: *Restore apps* brings them all
+  back, even ones disabled from a PC. Entries marked "Warning" turn off a feature (voice search,
+  casting, phone remote).
+  *Recommended* entries (content-recognition tracking such as Anoki ACR, ad channels, partner
+  auto-installs, vendor stores, setup leftovers) and the **keep-list** come from
+  [cleanyourtv](https://github.com/Gathin23/cleanyourtv) (MIT)'s tested lists for AI PONT TVs, the
+  Changhong/MediaTek platform used by realme, CHiQ, RCA and others. Parts that Live TV, HDMI inputs
+  and the remote need (`com.mediatek.*`, `com.mstar.*`, `partnercustomizer`, firmware updater, key
+  service) are never listed.
 - **Restore the original launcher** undoes the lock.
 
 These use the TV's own debugging connection (the same access as `adb shell` from a PC):
@@ -119,12 +143,17 @@ app/src/main/java/com/glass/launcher/
   AppAdapter.kt        icons + Liquid Glass focus / tilt / parallax
   DockDecoration.kt    the glass dock behind the top row
   Metrics.kt           tvOS 26 proportions as fractions of the screen
-  Graphics.kt          icon colours, Top Shelf artwork, blur
+  Graphics.kt          icon colours, app artwork, blur
   AppRepository.kt     installed apps, saved order, hidden apps
   SetupActivity.kt     Glass Launcher Settings (lock, debloat, restore)
   HomeGuardService.kt  keeps Glass as Home (accessibility service)
   TvShell.kt           runs shell commands through the TV's own ADB
-  ShelfContent.kt      newest-release show artwork for the Top Shelf (TVmaze)
+  Themes.kt            Glass / Grid themes, Orbitron font
+  GridBackgroundView.kt  live Tron grid floor, horizon glow and light cycles
+  TronArt.kt           draws the Tron wallpapers (vehicles, scenery)
+  Wallpapers.kt        today's wallpapers: your Tron folder + generated scenes
+  GridShow.kt          wallpaper slideshow for the screensaver
+  GridDreamService.kt  the Glass Grid screensaver and its preview
   AdBlock.kt           system-wide ad blocking via Private DNS (AdGuard)
   Debloat.kt           which preinstalled apps are offered / protected
 ```

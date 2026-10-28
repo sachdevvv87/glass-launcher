@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Darker at the bottom so the clock and credit always read. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerColor="#00000000"
+        android:centerY="0.55"
+        android:endColor="#B3000000"
+        android:startColor="#26000000" />
+</shape>

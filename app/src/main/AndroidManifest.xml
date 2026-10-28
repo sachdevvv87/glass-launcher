@@ -17,6 +17,12 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
+    <!-- Your own wallpapers (a "Tron" folder). -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
     <application
         android:allowBackup="true"
         android:banner="@drawable/banner"
@@ -55,6 +61,23 @@
             android:exported="true"
             android:label="@string/setup_title"
             android:screenOrientation="landscape" />
+
+        <activity
+            android:name=".ScreensaverPreviewActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
+        <!-- The Glass Grid screensaver (Settings → Device Preferences → Screen saver). -->
+        <service
+            android:name=".GridDreamService"
+            android:exported="true"
+            android:label="@string/dream_label"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".HomeGuardService"

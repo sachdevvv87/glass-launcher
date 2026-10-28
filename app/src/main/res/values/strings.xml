@@ -5,14 +5,30 @@
     <string name="edit_hint_browsing">Press OK to pick up an app  ·  Back when done</string>
     <string name="edit_hint_carrying">Arrows move the app  ·  OK drops it here</string>
     <string name="cannot_open">That can\'t be opened on this TV</string>
-    <string name="shelf_credit">Artwork: TVmaze</string>
 
     <!-- Setup: home screen -->
     <string name="section_home">Home screen</string>
     <string name="btn_rearrange">Rearrange apps</string>
     <string name="btn_rearrange_caption">Opens Edit Home Screen: every icon wiggles. Press OK on an app to pick it up, move it with the arrows (up/down jump a whole row), press OK to drop it, then pick up the next one. Press Back when you\'re done. Also on the Home screen: hold OK on any app → Edit Home Screen or Move to Top Row, or hold OK on Settings → Rearrange Apps.</string>
-    <string name="btn_artwork">Show artwork in the Top Shelf: %1$s</string>
-    <string name="btn_artwork_caption">For Netflix, Prime Video, YouTube, Apple TV, JioHotstar and other streaming apps, the Top Shelf shows the newest releases on that service (new series first, then new seasons and episodes) with their backdrops, from tvmaze.com, checked every 3 hours. Android only lets its built-in launcher read the apps\' own posters.</string>
+
+    <!-- Setup: theme and screensaver -->
+    <string name="section_look">Theme and screensaver</string>
+    <string name="btn_theme">Theme: %1$s</string>
+    <string name="theme_glass">Glass (tvOS)</string>
+    <string name="theme_grid">Grid (Tron)</string>
+    <string name="btn_theme_caption">Grid: Tron: Legacy\'s neon grid floor with light cycles, cyan light-line edges and glow, Orbitron lettering. Glass: tvOS 26 Liquid Glass. Go back to Home to see it.</string>
+    <string name="btn_f1_wall">Daily Tron wallpaper on the Home screen: %1$s</string>
+    <string name="btn_screensaver">Use the Grid screensaver</string>
+    <string name="btn_preview">Preview the screensaver</string>
+    <string name="btn_photos">Let Glass show your own wallpapers</string>
+    <string name="f1_caption">Tron-style Grid wallpapers drawn by Glass: a different set every day (light cycles, a cycle duel, a light jet, a patrol craft, neon ridges, an identity disc, a neon city, the portal), with the time and date. To add your own wallpapers, send pictures with LocalSend into a folder named Tron (for example Download/Tron or Pictures/Tron). They\'re shown first. You can also choose the screensaver in Settings → Device Preferences → Screen saver.</string>
+    <string name="screensaver_set">The Glass Grid screensaver is now the TV\'s screensaver.</string>
+    <string name="photos_granted">Glass can now show pictures from your Tron folder.</string>
+    <string name="photos_denied">Without this permission Glass shows its own Grid wallpapers only.</string>
+    <string name="photos_already">Glass can already show pictures from your Tron folder.</string>
+    <string name="btn_select_recommended">Select recommended (cleanyourtv list)</string>
+    <string name="tag_recommended">Recommended</string>
+    <string name="dream_label">Glass Grid</string>
 
     <!-- Setup: ad blocking -->
     <string name="section_adblock">Ad blocking</string>
@@ -55,7 +71,7 @@
     <string name="btn_guard_caption">Opens Accessibility settings. Choose Glass Launcher Home Guard and turn it on. Home Guard sends the Home button back to Glass and closes the original launcher whenever it appears.</string>
     <string name="btn_restore_launcher">Restore the original launcher</string>
     <string name="section_bloat">Remove bloatware</string>
-    <string name="section_bloat_body">Select apps, then press Disable. Disabled apps disappear completely but are not deleted, so you can bring them back here at any time.</string>
+    <string name="section_bloat_body">Select apps, then press Disable. Disabled apps disappear completely but are not deleted, so you can bring them back here at any time. \"Recommended\" entries (telemetry, ads, vendor extras) come from cleanyourtv\'s tested lists for AI PONT TVs. Parts that Live TV, HDMI inputs and the remote need are never listed.</string>
     <string name="btn_disable">Disable selected apps</string>
     <string name="btn_restore_apps">Restore apps disabled by Glass (%1$d)</string>
     <string name="no_bloat">No preinstalled extras were found on this TV.</string>

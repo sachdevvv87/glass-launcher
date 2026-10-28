@@ -28,6 +28,7 @@ import kotlin.random.Random
 class AppAdapter(
     private val listener: Listener,
     private val m: Metrics,
+    private val theme: GlassTheme = GlassTheme.GLASS,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     interface Listener {
@@ -152,7 +153,18 @@ class AppAdapter(
             specular.translationX = specRestX
             specular.translationY = specRestY
 
-            rim.background = GlassRimDrawable(m.radius, ctx.dp(2) * 0.75f)
+            val grid = theme == GlassTheme.GRID
+            rim.background = GlassRimDrawable(m.radius, ctx.dp(2) * 0.75f, neon = grid)
+            if (grid) {
+                // Tron: a neon edge instead of glass, and the focus "shadow" glows cyan.
+                specular.visibility = View.GONE
+                label.setTextColor(0xFFBDF6FF.toInt())
+                label.letterSpacing = 0.06f
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    tile.outlineSpotShadowColor = Themes.NEON
+                    tile.outlineAmbientShadowColor = Themes.NEON
+                }
+            }
             (label.layoutParams as LinearLayout.LayoutParams).topMargin = m.labelGap
             label.setTextSize(TypedValue.COMPLEX_UNIT_PX, m.labelSize)
 
